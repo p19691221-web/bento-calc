@@ -365,9 +365,9 @@ let state = {
 
 async function loadState(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
       state.menu = parsed.menu || [];
       state.order = parsed.order || { date: todayStr(), rows: [] };
     }
@@ -379,8 +379,7 @@ async function loadState(){
 
 async function saveState(){
   try{
-    const result = await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
-    if(!result){ console.error('儲存失敗'); }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }catch(e){
     console.error('Storage error:', e);
   }
