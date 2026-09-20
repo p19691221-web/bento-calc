@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>收款結算小幫手</title>
+<style>
+  :root{
+    --bg: #2B2019;
+    --bg-soft: #3A2C22;
+    --paper: #FBF6EC;
+    --paper-line: #E4D9C4;
+    --ink: #2B2019;
+    --ink-soft: #7A6A56;
+    --stamp-red: #B23A2E;
+    --stamp-green: #4F7A52;
+    --stamp-amber: #B4802A;
+    --accent: #C7622A;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--paper);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    min-height:100vh;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; }
+
+  .wrap{
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 28px 16px 60px;
+  }
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom: 18px;
+    gap: 12px;
+  }
+  header h1{
+    font-size: 1.3rem;
+    margin: 0 0 4px;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+  }
+  header p{
+    margin:0;
+    font-size: 0.82rem;
+    color: #C9B8A2;
+  }
+  .newday-btn{
+    background: transparent;
+    border: 1px solid #6B5A47;
+    color: #D8C7B0;
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .newday-btn:active{ background: var(--bg-soft); }
+
+  .dateline{
+    font-size: 0.78rem;
+    color: #C9B8A2;
+    margin: -8px 0 18px;
+  }
+
+  section.card{
+    background: var(--bg-soft);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  section.card > summary, section.card > .card-title{
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #F0E4D2;
+    cursor: pointer;
+    list-style: none;
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  section.card > summary::-webkit-details-marker{ display:none; }
+  .caret{ transition: transform .15s; color:#C9B8A2; font-size: 0.8rem; }
+  details[open] .caret{ transform: rotate(90deg); }
+
+  .menu-list{ margin-top: 12px; display:flex; flex-direction:column; gap:8px; }
+  .menu-row{
+    display:flex; align-items:center; gap:8px;
+  }
+  .menu-row input[type=text]{ flex: 1.4; }
+  .menu-row input[type=number]{ flex: 0.8; }
+  .icon-btn{
+    background:none; border:none; color:#A98F70;
+    font-size: 1.1rem; cursor:pointer; padding: 2px 6px;
+    line-height:1;
+  }
+  .icon-btn:active{ color: var(--stamp-red); }
+
+  input, select{
+    background: #2E241C;
+    border: 1px solid #55442F;
+    color: var(--paper);
+    border-radius: 6px;
+    padding: 8px 9px;
+    font-size: 0.88rem;
+    width: 100%;
+  }
+  input::placeholder{ color: #8A7860; }
+  input:focus, select:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .add-menu-row{ display:flex; gap:8px; margin-top: 10px; }
+  .add-menu-row input[type=text]{ flex: 1.4; }
+  .add-menu-row input[type=number]{ flex: 0.8; }
+  .primary-btn{
+    background: var(--accent);
+    color: #FBF6EC;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .primary-btn:active{ background: #A6501F; }
+
+  .empty-note{
+    color: #A98F70; font-size: 0.82rem; margin-top: 10px; line-height:1.6;
+  }
+
+  /* --- store chips --- */
+  .store-chips{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;
+  }
+  .store-chip{
+    background:#2E241C; border:1px solid #55442F; color:#D8C7B0;
+    border-radius:20px; padding:6px 13px; font-size:0.82rem;
+    cursor:pointer; white-space:nowrap;
+  }
+  .store-chip.active{
+    background: var(--accent); border-color: var(--accent); color:#fff; font-weight:700;
+  }
+  .store-edit-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:14px; padding-top:12px; border-top:1px dashed #55442F;
+  }
+  .store-edit-header .name{ font-weight:700; font-size:0.88rem; color:#F0E4D2; }
+  .link-btn{
+    background:none; border:none; color:#C98060; font-size:0.76rem;
+    cursor:pointer; padding:2px 4px; text-decoration:underline;
+  }
+  .current-store-line{
+    font-size:0.82rem; color:#D8C7B0; margin-top:12px;
+  }
+  .current-store-line b{ color:#F0E4D2; }
+
+  /* --- order entry form --- */
+  .form-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .form-grid .full{ grid-column: 1 / -1; }
+  .field-label{
+    font-size: 0.72rem;
+    color: #B7A588;
+    margin-bottom: 3px;
+    display:block;
+  }
+  .form-grid > div{ display:flex; flex-direction:column; }
+  .form-actions{ margin-top: 12px; display:flex; justify-content:flex-end; }
+
+  /* --- item checklist (multi-select) --- */
+  .item-check-list{ display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+  .item-check-row{
+    display:flex; align-items:center; gap:8px;
+    background:#2E241C; border:1px solid #55442F; border-radius:8px;
+    padding:8px 10px;
+  }
+  .item-check-row .iname{ flex:1.6; font-size:0.85rem; color:#F0E4D2; }
+  .item-check-row input[type=number]{ padding:6px 7px; font-size:0.82rem; }
+  .item-check-row .qty-input{ flex:0.7; }
+  .item-check-row .price-input{ flex:0.9; }
+  .item-check-row .qty-label, .item-check-row .price-label{
+    font-size:0.66rem; color:#9C8A72; display:block; margin-bottom:2px;
+  }
+
+  /* --- receipt ticket --- */
+  .receipt-wrap{ position: relative; margin: 26px 0; }
+  .receipt{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 2px;
+    padding: 18px 16px 14px;
+    position: relative;
+  }
+  .zigzag{
+    position:absolute; left:0; right:0; height:11px;
+    background-image:
+      linear-gradient(-45deg, var(--bg) 6px, transparent 0),
+      linear-gradient(45deg, var(--bg) 6px, transparent 0);
+    background-size: 12px 12px;
+    background-repeat: repeat-x;
+    background-position: 0 0;
+  }
+  .zigzag.top{ top: -10px; }
+  .zigzag.bottom{ bottom: -10px; transform: rotate(180deg); }
+
+  .receipt-title{
+    text-align:center;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--paper-line);
+  }
+
+  .order-row{
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--paper-line);
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  .order-row:last-child{ border-bottom: none; }
+  .order-row-name{ font-weight: 700; font-size: 0.92rem; }
+  .order-row-item{ font-size: 0.78rem; color: var(--ink-soft); }
+  .order-row-due{ font-weight:700; font-size: 0.95rem; white-space:nowrap; }
+  .order-row-right{ display:flex; align-items:center; gap:8px; }
+  .row-delete{
+    background:none; border:none; color: var(--ink-soft);
+    font-size: 0.95rem; cursor:pointer; padding: 0 2px;
+  }
+  .row-delete:active{ color: var(--stamp-red); }
+
+  .stamp{
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    display:inline-block;
+    transform: rotate(-2deg);
+    border: 1.5px solid currentColor;
+  }
+  .stamp.short{ color: var(--stamp-red); }
+  .stamp.over{ color: var(--stamp-amber); }
+  .stamp.even{ color: var(--stamp-green); }
+  .stamp.pending{ color: var(--ink-soft); border-style:dashed; }
+
+  .receipt-empty{
+    text-align:center; color: var(--ink-soft); font-size: 0.85rem;
+    padding: 20px 0 6px;
+  }
+
+  /* --- summary --- */
+  .summary-person{
+    padding: 10px 0; border-bottom: 1px dashed var(--paper-line);
+    font-size: 0.85rem;
+  }
+  .summary-person:last-of-type{ border-bottom:none; }
+  .summary-person-top{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  .summary-person .name{ font-weight:700; }
+  .summary-person .due{ color: var(--ink-soft); font-size: 0.76rem; margin-top:2px; }
+  .summary-given-field{
+    display:flex; align-items:center; gap:6px; margin-top:7px;
+  }
+  .summary-given-field label{ font-size: 0.74rem; color: var(--ink-soft); }
+  .summary-given-field input{
+    width: 90px;
+    background: #fff;
+    color: var(--ink);
+    border: 1px solid var(--paper-line);
+    padding: 5px 7px;
+    font-size: 0.82rem;
+  }
+
+  .grand-total{
+    margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--ink);
+    display:flex; flex-direction:column; gap: 5px; font-size: 0.9rem;
+  }
+  .grand-total .line{ display:flex; justify-content:space-between; }
+  .grand-total .line.diff{ font-weight:700; }
+
+  .banner{
+    background: #4A3826;
+    border: 1px solid #6B5237;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    color: #F0E4D2;
+    margin-bottom: 16px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .banner button{
+    background: var(--accent); border:none; color:#fff;
+    border-radius: 5px; padding: 6px 10px; font-size: 0.76rem;
+    cursor:pointer; white-space:nowrap;
+  }
+
+  @media (max-width: 380px){
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+
+  <header>
+    <div>
+      <h1>收款結算小幫手</h1>
+      <p>登記今天的訂購，抓出誰少給、誰多給</p>
+    </div>
+    <button class="newday-btn" id="newDayBtn">新的一天</button>
+  </header>
+  <div class="dateline" id="dateLine"></div>
+
+  <div id="dayBanner"></div>
+
+  <details class="card" id="storeCard">
+    <summary>
+      <span>店家與菜單（<span id="storeCount">0</span> 家）</span>
+      <span class="caret">▸</span>
+    </summary>
+
+    <div class="store-chips" id="storeChips"></div>
+    <div class="add-menu-row">
+      <input type="text" id="newStoreName" placeholder="新增店家名稱，例如：漢來便當">
+      <button class="primary-btn" id="addStoreBtn">新增店家</button>
+    </div>
+
+    <div id="storeEditArea"></div>
+  </details>
+
+  <section class="card">
+    <div class="card-title">今天的訂購資訊</div>
+    <div id="storeSelectWrap" class="form-grid" style="margin-top:12px;">
+      <div class="full">
+        <span class="field-label">今天訂哪家</span>
+        <select id="fStoreSelect"></select>
+      </div>
+    </div>
+    <div id="currentStoreLine" class="current-store-line"></div>
+    <div class="form-grid" style="margin-top:12px;">
+      <div class="full">
+        <span class="field-label">送達地址</span>
+        <input type="text" id="fAddress" placeholder="例如：台北市信義路◯◯號 3樓 警衛室">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">登記一筆</div>
+    <div id="savedNamesWrap" class="store-chips" style="margin-top:10px;"></div>
+    <div class="form-grid" style="margin-top:10px;">
+      <div class="full">
+        <span class="field-label">姓名</span>
+        <input type="text" id="fName" placeholder="客人／訂購的人">
+      </div>
+      <div class="full">
+        <span class="field-label">部門／分機（可留空）</span>
+        <input type="text" id="fDept" placeholder="例如：業務部 分機102">
+      </div>
+    </div>
+    <div class="field-label" style="margin-top:14px;">點的品項（可複選、每樣填數量）</div>
+    <div class="item-check-list" id="itemCheckList"></div>
+    <div class="empty-note" id="itemCheckEmpty" style="display:none;">這家店還沒有品項，先到上面「店家與菜單」新增。</div>
+    <div class="form-actions">
+      <button class="primary-btn" id="addRowBtn">登記</button>
+    </div>
+  </section>
+
+  <div class="receipt-wrap">
+    <div class="zigzag top"></div>
+    <div class="receipt">
+      <div class="receipt-title">今日登記</div>
+      <div id="orderRows"></div>
+      <div class="receipt-empty" id="orderEmpty">還沒有登記，上面填一筆看看</div>
+    </div>
+    <div class="zigzag bottom"></div>
+  </div>
+
+  <section class="card" id="lineCard" style="display:none;">
+    <div class="card-title">給 LINE 的訂單文字</div>
+    <div class="empty-note" style="margin-top:8px;">整理好之後可以直接複製貼到 LINE 傳給店家（不含訂購人姓名）</div>
+    <textarea id="lineText" readonly style="margin-top:10px; width:100%; min-height:160px; resize:vertical; font-size:0.82rem; line-height:1.6; font-family:inherit;"></textarea>
+    <div class="form-actions">
+      <button class="primary-btn" id="copyLineBtn">複製文字</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">結算</div>
+    <div id="summaryList" style="margin-top:10px;"></div>
+    <div class="grand-total">
+      <div class="line"><span>應收總計</span><span class="mono" id="totalDue">0 元</span></div>
+      <div class="line"><span>已收總計</span><span class="mono" id="totalGiven">0 元</span></div>
+      <div class="line diff"><span>差額</span><span class="mono" id="totalDiff">0 元</span></div>
+    </div>
+    <div class="form-actions">
+      <button class="primary-btn" id="genLineBtn">整理成 LINE 訂單文字</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'bento-calc-state';
+const uid = () => Math.random().toString(36).slice(2, 10);
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const fmt = n => `${Math.round(n).toLocaleString()} 元`;
+
+let state = {
+  stores: [],
+  savedNames: [],
+  order: { date: todayStr(), rows: [], payments: {}, storeId: '', address: '' }
+};
+
+// which store's menu is currently open for editing in the "店家與菜單" card
+let editingStoreId = '';
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+
+      if(Array.isArray(parsed.stores)){
+        state.stores = parsed.stores;
+      }else if(Array.isArray(parsed.menu) && parsed.menu.length){
+        state.stores = [{ id: uid(), name: '我的菜單', items: parsed.menu }];
+      }else{
+        state.stores = [];
+      }
+
+      if(Array.isArray(parsed.savedNames)){
+        state.savedNames = parsed.savedNames;
+      }
+
+      const oldOrder = parsed.order || {};
+      state.order = {
+        date: oldOrder.date || todayStr(),
+        rows: [],
+        payments: {},
+        storeId: oldOrder.storeId || '',
+        address: oldOrder.address || ''
+      };
+
+      // migrate rows: strip old per-row `given`, roll it into per-person payments
+      (oldOrder.rows || []).forEach(r => {
+        state.order.rows.push({
+          id: r.id || uid(), name: r.name, dept: r.dept || '',
+          itemName: r.itemName, qty: r.qty, unitPrice: r.unitPrice
+        });
+        if(r.given !== null && r.given !== undefined && r.given !== ''){
+          state.order.payments[r.name] = (state.order.payments[r.name] || 0) + Number(r.given);
+        }
+      });
+      // if there was already a payments map (future format), prefer merging it in too
+      if(oldOrder.payments){
+        Object.keys(oldOrder.payments).forEach(name => {
+          state.order.payments[name] = oldOrder.payments[name];
+        });
+      }
+
+      // seed the saved-names list from any names already in today's rows,
+      // so existing users don't start with an empty list
+      state.order.rows.forEach(r => {
+        if(r.name && !state.savedNames.includes(r.name)) state.savedNames.push(r.name);
+      });
+    }
+  }catch(e){
+    // no saved state yet — start fresh
+  }
+
+  // auto-seed a default store so people aren't forced to set one up before using the tool
+  if(state.stores.length === 0){
+    state.stores.push({ id: uid(), name: '我的菜單', items: [] });
+  }
+  if(!state.order.storeId || !state.stores.some(s => s.id === state.order.storeId)){
+    state.order.storeId = state.stores[0].id;
+  }
+  if(!state.stores.some(s => s.id === editingStoreId)){
+    editingStoreId = state.stores[0].id;
+  }
+
+  saveState();
+  render();
+}
+
+async function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error('Storage error:', e);
+  }
+}
+
+function checkDayBanner(){
+  const banner = document.getElementById('dayBanner');
+  if(state.order.date !== todayStr() && state.order.rows.length > 0){
+    banner.innerHTML = `
+      <div class="banner">
+        <span>目前顯示的是 ${state.order.date} 的登記，要開始新的一天嗎？</span>
+        <button id="bannerClearBtn">開始新的一天</button>
+      </div>`;
+    document.getElementById('bannerClearBtn').onclick = startNewDay;
+  }else{
+    banner.innerHTML = '';
+  }
+}
+
+function startNewDay(){
+  if(state.order.rows.length > 0 && !confirm('清空今天已登記的所有項目？')) return;
+  const keepStoreId = state.order.storeId;
+  state.order = { date: todayStr(), rows: [], payments: {}, storeId: keepStoreId, address: '' };
+  saveState();
+  render();
+}
+
+// ---------- stores & menus ----------
+function getStore(id){ return state.stores.find(s => s.id === id); }
+
+function renderStores(){
+  document.getElementById('storeCount').textContent = state.stores.length;
+
+  const chips = document.getElementById('storeChips');
+  chips.innerHTML = state.stores.map(s => `
+    <button type="button" class="store-chip ${s.id === editingStoreId ? 'active' : ''}" data-store="${s.id}">${escapeHtml(s.name)}</button>
+  `).join('');
+  chips.querySelectorAll('[data-store]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editingStoreId = btn.dataset.store;
+      renderStores();
+    });
+  });
+
+  const editArea = document.getElementById('storeEditArea');
+  const store = getStore(editingStoreId);
+  if(!store){
+    editArea.innerHTML = '';
+    return;
+  }
+
+  editArea.innerHTML = `
+    <div class="store-edit-header">
+      <span class="name">${escapeHtml(store.name)} 的菜單</span>
+      <button type="button" class="link-btn" id="deleteStoreBtn">刪除這家店</button>
+    </div>
+    <div class="menu-list" id="menuList"></div>
+    <div class="empty-note" id="menuEmptyNote" style="display:none;">這家店還沒有品項，新增一個吧。</div>
+    <div class="add-menu-row">
+      <input type="text" id="newItemName" placeholder="品項名稱，例如：奶茶、排骨便當">
+      <input type="number" id="newItemPrice" placeholder="價格" min="0">
+      <button class="primary-btn" id="addItemBtn">新增</button>
+    </div>
+
+    <div class="store-edit-header" style="margin-top:18px;">
+      <span class="name" style="font-size:0.82rem;">整份菜單一次貼上</span>
+    </div>
+    <div class="empty-note" style="margin-top:4px;">品項和價格中間可以用空格、逗號或直接連在一起，$、NT$、元這些符號都可以照抄；就算貼上時換行不見了、全部擠成一段也沒關係，會自動抓出每一樣。例如：<br>排骨便當 120<br>雞腿飯,NT$150<br>奶茶......30元</div>
+
+    <div style="margin-top:12px; background:#241B15; border:1px solid #55442F; border-radius:8px; padding:10px 12px;">
+      <div style="font-size:0.78rem; color:#D8C7B0; line-height:1.6;">
+        從 Google 搜尋或網頁複製的菜單常常會擠成一整段、夾雜項目符號和折扣價，直接貼可能認不出來。<br>
+        可以先把那段文字丟給 ChatGPT 或 Gemini 這類 AI，用下面這段提示詞請它幫你整理好格式，再貼過來這裡。長按下面的文字框可以直接選取複製。
+      </div>
+      <textarea id="promptText" readonly style="margin-top:8px; width:100%; min-height:60px; resize:vertical; font-size:0.8rem; line-height:1.5; font-family:inherit; background:#fff; color:var(--ink); border:1px solid var(--paper-line); border-radius:6px; padding:7px 8px;">請把以下菜單文字整理成「品項 價格」一行一個的格式，只保留原價（不要折扣價、不要其他註解、不要項目符號），直接輸出結果就好：</textarea>
+      <div class="form-actions" style="margin-top:8px;">
+        <button type="button" class="primary-btn" id="copyPromptBtn" style="background:#55442F;">一鍵複製提示詞</button>
+      </div>
+    </div>
+
+    <textarea id="bulkMenuText" placeholder="排骨便當 120&#10;雞腿飯 150&#10;奶茶 30" style="margin-top:12px; width:100%; min-height:110px; resize:vertical; font-size:0.85rem; line-height:1.6; font-family:inherit; background:#2E241C; border:1px solid #55442F; color:var(--paper); border-radius:6px; padding:8px 9px;"></textarea>
+    <div class="form-actions">
+      <button class="primary-btn" id="bulkAddBtn">一次新增這些品項</button>
+    </div>
+  `;
+
+  const list = document.getElementById('menuList');
+  const emptyNote = document.getElementById('menuEmptyNote');
+  emptyNote.style.display = store.items.length ? 'none' : 'block';
+
+  store.items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'menu-row';
+    row.innerHTML = `
+      <input type="text" value="${escapeAttr(item.name)}" data-id="${item.id}" data-field="name">
+      <input type="number" value="${item.price}" min="0" data-id="${item.id}" data-field="price">
+      <button class="icon-btn" data-del="${item.id}" title="刪除">✕</button>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      const field = e.target.dataset.field;
+      const item = store.items.find(m => m.id === id);
+      if(!item) return;
+      item[field] = field === 'price' ? Number(e.target.value) || 0 : e.target.value;
+      saveState();
+      renderItemChecklist();
+      renderStoreSelect();
+    });
+  });
+  list.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      store.items = store.items.filter(m => m.id !== btn.dataset.del);
+      saveState();
+      renderStores();
+      renderItemChecklist();
+    });
+  });
+
+  document.getElementById('addItemBtn').addEventListener('click', () => {
+    const nameEl = document.getElementById('newItemName');
+    const priceEl = document.getElementById('newItemPrice');
+    const name = nameEl.value.trim();
+    const price = Number(priceEl.value);
+    if(!name || !priceEl.value){ nameEl.focus(); return; }
+    store.items.push({ id: uid(), name, price: price || 0 });
+    nameEl.value = ''; priceEl.value = '';
+    saveState();
+    renderStores();
+    renderItemChecklist();
+  });
+
+  document.getElementById('copyPromptBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('copyPromptBtn');
+    const promptEl = document.getElementById('promptText');
+    let copied = false;
+    try{
+      await navigator.clipboard.writeText(promptEl.value);
+      copied = true;
+    }catch(e){
+      try{
+        promptEl.focus();
+        promptEl.select();
+        copied = document.execCommand('copy');
+      }catch(e2){
+        copied = false;
+      }
+    }
+    btn.textContent = copied ? '已複製！貼去 AI 對話框' : '複製失敗，請長按上面文字框手動選取複製';
+    setTimeout(() => { btn.textContent = '一鍵複製提示詞'; }, 2500);
+  });
+
+  document.getElementById('bulkAddBtn').addEventListener('click', () => {
+    const textarea = document.getElementById('bulkMenuText');
+    const rawLines = textarea.value.split('\n').map(l => l.trim()).filter(l => l);
+    if(rawLines.length === 0){ textarea.focus(); return; }
+
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    // parseMenuChunk handles both a normal "one item per line" and the case
+    // where copy/paste collapsed everything onto a single line with no real
+    // line breaks (common when copying an AI chat reply) — it just finds
+    // every (name, price) pair it can within whatever text it's given.
+    rawLines.forEach(rawLine => {
+      const found = parseMenuChunk(rawLine);
+      if(found.length === 0){ skippedCount++; return; }
+      found.forEach(item => {
+        store.items.push({ id: uid(), name: item.name, price: item.price });
+        addedCount++;
+      });
+    });
+
+    if(addedCount === 0){
+      alert('沒有偵測到可以新增的品項，請確認有沒有價格數字');
+      return;
+    }
+    textarea.value = '';
+    saveState();
+    renderStores();
+    renderItemChecklist();
+    renderStoreSelect();
+    if(skippedCount > 0){
+      alert(`已新增 ${addedCount} 項，有 ${skippedCount} 行沒偵測到價格被略過，可以手動補上。`);
+    }
+  });
+
+  document.getElementById('deleteStoreBtn').addEventListener('click', () => {
+    if(state.stores.length === 1){
+      alert('至少要留一家店。');
+      return;
+    }
+    if(!confirm(`刪除「${store.name}」和它的菜單？`)) return;
+    state.stores = state.stores.filter(s => s.id !== store.id);
+    if(state.order.storeId === store.id) state.order.storeId = state.stores[0].id;
+    editingStoreId = state.stores[0].id;
+    saveState();
+    render();
+  });
+}
+
+document.getElementById('addStoreBtn').addEventListener('click', () => {
+  const nameEl = document.getElementById('newStoreName');
+  const name = nameEl.value.trim();
+  if(!name) { nameEl.focus(); return; }
+  const newStore = { id: uid(), name, items: [] };
+  state.stores.push(newStore);
+  editingStoreId = newStore.id;
+  nameEl.value = '';
+  saveState();
+  renderStores();
+  renderStoreSelect();
+});
+
+// ---------- today's store picker ----------
+function renderStoreSelect(){
+  const wrap = document.getElementById('storeSelectWrap');
+  const line = document.getElementById('currentStoreLine');
+  const sel = document.getElementById('fStoreSelect');
+
+  if(state.stores.some(s => s.id === state.order.storeId)){
+    // keep as-is
+  }else{
+    state.order.storeId = state.stores[0].id;
+  }
+
+  if(state.stores.length <= 1){
+    // only one store — no need to make the person choose, just show it as text
+    wrap.style.display = 'none';
+    const s = getStore(state.order.storeId);
+    line.textContent = s ? `今天訂：${s.name}` : '';
+  }else{
+    wrap.style.display = '';
+    line.textContent = '';
+    sel.innerHTML = state.stores.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    sel.value = state.order.storeId;
+  }
+}
+
+document.getElementById('fStoreSelect').addEventListener('change', e => {
+  state.order.storeId = e.target.value;
+  saveState();
+  renderItemChecklist();
+});
+document.getElementById('fAddress').addEventListener('change', e => {
+  state.order.address = e.target.value;
+  saveState();
+});
+
+// ---------- item checklist (multi-select for one person) ----------
+function renderItemChecklist(){
+  const wrap = document.getElementById('itemCheckList');
+  const empty = document.getElementById('itemCheckEmpty');
+  const store = getStore(state.order.storeId);
+
+  if(!store || store.items.length === 0){
+    wrap.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  wrap.innerHTML = store.items.map(item => `
+    <div class="item-check-row" data-item-id="${item.id}">
+      <span class="iname">${escapeHtml(item.name)}</span>
+      <div class="qty-input">
+        <span class="qty-label">數量</span>
+        <input type="number" min="0" placeholder="0" class="qty-field" data-item="${item.id}">
+      </div>
+      <div class="price-input">
+        <span class="price-label">單價</span>
+        <input type="number" min="0" value="${item.price}" class="price-field" data-item="${item.id}">
+      </div>
+    </div>
+  `).join('');
+}
+
+// ---------- order rows ----------
+function addOrderRow(){
+  const name = document.getElementById('fName').value.trim();
+  const dept = document.getElementById('fDept').value.trim();
+  const store = getStore(state.order.storeId);
+
+  if(!name){ document.getElementById('fName').focus(); return; }
+  if(!store){ return; }
+
+  const qtyFields = document.querySelectorAll('#itemCheckList .qty-field');
+  let addedAny = false;
+
+  qtyFields.forEach(qtyInput => {
+    const qty = Number(qtyInput.value) || 0;
+    if(qty <= 0) return;
+    const itemId = qtyInput.dataset.item;
+    const item = store.items.find(m => m.id === itemId);
+    if(!item) return;
+    const priceInput = document.querySelector(`.price-field[data-item="${itemId}"]`);
+    const unitPrice = Number(priceInput.value) || 0;
+
+    state.order.rows.push({
+      id: uid(), name, dept, itemName: item.name, qty, unitPrice
+    });
+    addedAny = true;
+  });
+
+  if(!addedAny){
+    alert('請至少填一樣品項的數量');
+    return;
+  }
+
+  if(!state.savedNames.includes(name)) state.savedNames.push(name);
+
+  state.order.date = todayStr();
+  document.getElementById('fName').value = '';
+  document.getElementById('fDept').value = '';
+  saveState();
+  render();
+}
+document.getElementById('addRowBtn').addEventListener('click', addOrderRow);
+
+function renderSavedNames(){
+  const wrap = document.getElementById('savedNamesWrap');
+  if(state.savedNames.length === 0){
+    wrap.innerHTML = `<div class="empty-note" style="margin-top:0;">登記過的人會自動出現在這裡，之後點一下就能快速帶入姓名。</div>`;
+    return;
+  }
+  wrap.innerHTML = state.savedNames.map(n => `
+    <span style="display:inline-flex; align-items:center; gap:2px;">
+      <button type="button" class="store-chip" data-pick="${escapeAttr(n)}">${escapeHtml(n)}</button>
+      <button type="button" class="icon-btn" data-removename="${escapeAttr(n)}" title="從清單移除" style="font-size:0.9rem; padding:2px 4px;">✕</button>
+    </span>
+  `).join('');
+
+  wrap.querySelectorAll('[data-pick]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('fName').value = btn.dataset.pick;
+      document.getElementById('fDept').focus();
+    });
+  });
+  wrap.querySelectorAll('[data-removename]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.savedNames = state.savedNames.filter(n => n !== btn.dataset.removename);
+      saveState();
+      renderSavedNames();
+    });
+  });
+}
+
+function statusFor(due, given){
+  if(given === null || given === undefined || given === '') return { cls:'pending', label:'尚未收錢' };
+  const diff = given - due;
+  if(diff === 0) return { cls:'even', label:'已收齊' };
+  if(diff < 0) return { cls:'short', label:`少給 ${fmt(-diff)}` };
+  return { cls:'over', label:`多給 ${fmt(diff)}` };
+}
+
+function renderOrderRows(){
+  const wrap = document.getElementById('orderRows');
+  const empty = document.getElementById('orderEmpty');
+  empty.style.display = state.order.rows.length ? 'none' : 'block';
+  wrap.innerHTML = '';
+
+  state.order.rows.forEach(row => {
+    const due = row.qty * row.unitPrice;
+    const el = document.createElement('div');
+    el.className = 'order-row';
+    el.innerHTML = `
+      <div>
+        <div class="order-row-name">${escapeHtml(row.name)}${row.dept ? `　<span style="font-weight:400;color:var(--ink-soft);">${escapeHtml(row.dept)}</span>` : ''}</div>
+        <div class="order-row-item">${escapeHtml(row.itemName)} × ${row.qty}</div>
+      </div>
+      <div class="order-row-right">
+        <div class="order-row-due mono">${fmt(due)}</div>
+        <button class="row-delete" data-del="${row.id}" title="刪除">✕</button>
+      </div>
+    `;
+    wrap.appendChild(el);
+  });
+
+  wrap.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.order.rows = state.order.rows.filter(r => r.id !== btn.dataset.del);
+      saveState();
+      render();
+    });
+  });
+}
+
+// ---------- summary ----------
+function renderSummary(){
+  const grouped = {};
+  state.order.rows.forEach(row => {
+    const due = row.qty * row.unitPrice;
+    if(!grouped[row.name]) grouped[row.name] = 0;
+    grouped[row.name] += due;
+  });
+
+  const list = document.getElementById('summaryList');
+  const names = Object.keys(grouped);
+  if(names.length === 0){
+    list.innerHTML = `<div class="empty-note">還沒有可以結算的項目</div>`;
+  }else{
+    list.innerHTML = names.map(name => {
+      const due = grouped[name];
+      const givenRaw = state.order.payments[name];
+      const hasGiven = givenRaw !== null && givenRaw !== undefined;
+      const status = hasGiven ? statusFor(due, givenRaw) : { cls:'pending', label:'尚未收錢' };
+      return `
+        <div class="summary-person">
+          <div class="summary-person-top">
+            <div>
+              <div class="name">${escapeHtml(name)}</div>
+              <div class="due">應收 ${fmt(due)}</div>
+            </div>
+            <span class="stamp ${status.cls}">${status.label}</span>
+          </div>
+          <div class="summary-given-field">
+            <label>收到</label>
+            <input type="number" min="0" placeholder="—" value="${hasGiven ? givenRaw : ''}" data-payname="${escapeAttr(name)}">
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  list.querySelectorAll('[data-payname]').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const person = e.target.dataset.payname;
+      if(e.target.value === ''){
+        delete state.order.payments[person];
+      }else{
+        state.order.payments[person] = Number(e.target.value);
+      }
+      saveState();
+      render();
+    });
+  });
+
+  const totalDue = state.order.rows.reduce((s,r) => s + r.qty * r.unitPrice, 0);
+  const totalGiven = Object.values(state.order.payments).reduce((s,v) => s + (Number(v) || 0), 0);
+  const totalDiff = totalGiven - totalDue;
+
+  document.getElementById('totalDue').textContent = fmt(totalDue);
+  document.getElementById('totalGiven').textContent = fmt(totalGiven);
+  const diffEl = document.getElementById('totalDiff');
+  diffEl.textContent = totalDiff === 0 ? '0 元（收齊）' : (totalDiff < 0 ? `少 ${fmt(-totalDiff)}` : `多 ${fmt(totalDiff)}`);
+  diffEl.style.color = totalDiff === 0 ? 'var(--stamp-green)' : (totalDiff < 0 ? 'var(--stamp-red)' : 'var(--stamp-amber)');
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+// Parses a chunk of pasted/OCR'd or AI-cleaned menu text into a list of
+// { name, price } items. Works whether it's one item per line, or every
+// item squished onto a single line with no real line breaks between them
+// (common when copy/paste drops newlines from an AI chat reply) — it just
+// scans for every (name, price) pair it can find. Handles $, NT$, 元,
+// thousand-separated prices like "1,200", and leading list markers/bullets.
+function parseMenuChunk(text){
+  const items = [];
+  const regex = /([^\d]+?)\s*(?:NT\$|NTD|\$)?\s*([0-9]{1,3}(?:,[0-9]{3})*)\s*(?:元|NTD)?/g;
+  let match;
+  while((match = regex.exec(text)) !== null){
+    let name = match[1].trim();
+    name = name.replace(/^[,，.\-－:：\s]+/, '').replace(/[,，.\-－:：\s]+$/, '');
+    name = name.replace(/^(?:[0-9]{1,3}[\.\)、]|[-•\*・])\s*/, '');
+    const price = Number(match[2].replace(/,/g, ''));
+    if(name && !isNaN(price)) items.push({ name, price });
+  }
+  return items;
+}
+
+// ---------- LINE order text ----------
+function generateLineText(){
+  const lines = [];
+  const store = getStore(state.order.storeId);
+  lines.push('【今日訂購】');
+  if(store) lines.push(`店家：${store.name}`);
+  if(state.order.address) lines.push(`送達地址：${state.order.address}`);
+  lines.push('');
+
+  // aggregate by item name only — no person names, per request
+  const itemTotals = {};
+  state.order.rows.forEach(row => {
+    itemTotals[row.itemName] = (itemTotals[row.itemName] || 0) + row.qty;
+  });
+  Object.keys(itemTotals).forEach(itemName => {
+    lines.push(`${itemName} × ${itemTotals[itemName]}`);
+  });
+
+  const totalQty = state.order.rows.reduce((s,r) => s + r.qty, 0);
+  const totalDue = state.order.rows.reduce((s,r) => s + r.qty * r.unitPrice, 0);
+  lines.push('');
+  lines.push(`共 ${totalQty} 份，合計 ${fmt(totalDue)}`);
+
+  return lines.join('\n');
+}
+
+document.getElementById('genLineBtn').addEventListener('click', () => {
+  const text = generateLineText();
+  const card = document.getElementById('lineCard');
+  const textarea = document.getElementById('lineText');
+  textarea.value = text;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+document.getElementById('copyLineBtn').addEventListener('click', async () => {
+  const textarea = document.getElementById('lineText');
+  const btn = document.getElementById('copyLineBtn');
+  try{
+    await navigator.clipboard.writeText(textarea.value);
+    btn.textContent = '已複製！';
+  }catch(e){
+    textarea.select();
+    document.execCommand('copy');
+    btn.textContent = '已複製！';
+  }
+  setTimeout(() => { btn.textContent = '複製文字'; }, 1500);
+});
+
+function render(){
+  document.getElementById('dateLine').textContent = `日期：${state.order.date}`;
+  checkDayBanner();
+  renderStores();
+  renderStoreSelect();
+  renderSavedNames();
+  renderItemChecklist();
+  renderOrderRows();
+  renderSummary();
+  document.getElementById('fAddress').value = state.order.address || '';
+}
+
+document.getElementById('newDayBtn').addEventListener('click', startNewDay);
+
+loadState();
+</script>
+</body>
+</html>
