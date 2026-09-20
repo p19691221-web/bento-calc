@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>收款結算小幫手</title>
+<style>
+  :root{
+    --bg: #2B2019;
+    --bg-soft: #3A2C22;
+    --paper: #FBF6EC;
+    --paper-line: #E4D9C4;
+    --ink: #2B2019;
+    --ink-soft: #7A6A56;
+    --stamp-red: #B23A2E;
+    --stamp-green: #4F7A52;
+    --stamp-amber: #B4802A;
+    --accent: #C7622A;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--paper);
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    min-height:100vh;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; }
+
+  .wrap{
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 28px 16px 60px;
+  }
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom: 18px;
+    gap: 12px;
+  }
+  header h1{
+    font-size: 1.3rem;
+    margin: 0 0 4px;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+  }
+  header p{
+    margin:0;
+    font-size: 0.82rem;
+    color: #C9B8A2;
+  }
+  .newday-btn{
+    background: transparent;
+    border: 1px solid #6B5A47;
+    color: #D8C7B0;
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .newday-btn:active{ background: var(--bg-soft); }
+
+  .dateline{
+    font-size: 0.78rem;
+    color: #C9B8A2;
+    margin: -8px 0 18px;
+  }
+
+  section.card{
+    background: var(--bg-soft);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  section.card > summary, section.card > .card-title{
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #F0E4D2;
+    cursor: pointer;
+    list-style: none;
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  section.card > summary::-webkit-details-marker{ display:none; }
+  .caret{ transition: transform .15s; color:#C9B8A2; font-size: 0.8rem; }
+  details[open] .caret{ transform: rotate(90deg); }
+
+  .menu-list{ margin-top: 12px; display:flex; flex-direction:column; gap:8px; }
+  .menu-row{
+    display:flex; align-items:center; gap:8px;
+  }
+  .menu-row input[type=text]{ flex: 1.4; }
+  .menu-row input[type=number]{ flex: 0.8; }
+  .icon-btn{
+    background:none; border:none; color:#A98F70;
+    font-size: 1.1rem; cursor:pointer; padding: 2px 6px;
+    line-height:1;
+  }
+  .icon-btn:active{ color: var(--stamp-red); }
+
+  input, select{
+    background: #2E241C;
+    border: 1px solid #55442F;
+    color: var(--paper);
+    border-radius: 6px;
+    padding: 8px 9px;
+    font-size: 0.88rem;
+    width: 100%;
+  }
+  input::placeholder{ color: #8A7860; }
+  input:focus, select:focus{ outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .add-menu-row{ display:flex; gap:8px; margin-top: 10px; }
+  .add-menu-row input[type=text]{ flex: 1.4; }
+  .add-menu-row input[type=number]{ flex: 0.8; }
+  .primary-btn{
+    background: var(--accent);
+    color: #FBF6EC;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .primary-btn:active{ background: #A6501F; }
+
+  .empty-note{
+    color: #A98F70; font-size: 0.82rem; margin-top: 10px; line-height:1.6;
+  }
+
+  /* --- store chips --- */
+  .store-chips{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;
+  }
+  .store-chip{
+    background:#2E241C; border:1px solid #55442F; color:#D8C7B0;
+    border-radius:20px; padding:6px 13px; font-size:0.82rem;
+    cursor:pointer; white-space:nowrap;
+  }
+  .store-chip.active{
+    background: var(--accent); border-color: var(--accent); color:#fff; font-weight:700;
+  }
+  .store-edit-header{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:14px; padding-top:12px; border-top:1px dashed #55442F;
+  }
+  .store-edit-header .name{ font-weight:700; font-size:0.88rem; color:#F0E4D2; }
+  .link-btn{
+    background:none; border:none; color:#C98060; font-size:0.76rem;
+    cursor:pointer; padding:2px 4px; text-decoration:underline;
+  }
+
+  /* --- order entry form --- */
+  .form-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .form-grid .full{ grid-column: 1 / -1; }
+  .field-label{
+    font-size: 0.72rem;
+    color: #B7A588;
+    margin-bottom: 3px;
+    display:block;
+  }
+  .form-grid > div{ display:flex; flex-direction:column; }
+  .form-actions{ margin-top: 12px; display:flex; justify-content:flex-end; }
+
+  /* --- receipt ticket --- */
+  .receipt-wrap{ position: relative; margin: 26px 0; }
+  .receipt{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 2px;
+    padding: 18px 16px 14px;
+    position: relative;
+  }
+  .zigzag{
+    position:absolute; left:0; right:0; height:11px;
+    background-image:
+      linear-gradient(-45deg, var(--bg) 6px, transparent 0),
+      linear-gradient(45deg, var(--bg) 6px, transparent 0);
+    background-size: 12px 12px;
+    background-repeat: repeat-x;
+    background-position: 0 0;
+  }
+  .zigzag.top{ top: -10px; }
+  .zigzag.bottom{ bottom: -10px; transform: rotate(180deg); }
+
+  .receipt-title{
+    text-align:center;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--paper-line);
+  }
+
+  .order-row{
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--paper-line);
+  }
+  .order-row:last-child{ border-bottom: none; }
+  .order-row-top{
+    display:flex; justify-content:space-between; align-items:baseline; gap: 8px;
+  }
+  .order-row-name{ font-weight: 700; font-size: 0.92rem; }
+  .order-row-item{ font-size: 0.78rem; color: var(--ink-soft); }
+  .order-row-due{ font-weight:700; font-size: 0.95rem; }
+  .order-row-mid{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top: 6px; gap: 8px;
+  }
+  .given-field{ display:flex; align-items:center; gap:6px; }
+  .given-field label{ font-size: 0.74rem; color: var(--ink-soft); }
+  .given-field input{
+    width: 84px;
+    background: #fff;
+    color: var(--ink);
+    border: 1px solid var(--paper-line);
+    padding: 5px 7px;
+    font-size: 0.82rem;
+  }
+  .stamp{
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    display:inline-block;
+    transform: rotate(-2deg);
+    border: 1.5px solid currentColor;
+  }
+  .stamp.short{ color: var(--stamp-red); }
+  .stamp.over{ color: var(--stamp-amber); }
+  .stamp.even{ color: var(--stamp-green); }
+  .stamp.pending{ color: var(--ink-soft); border-style:dashed; }
+  .row-delete{
+    background:none; border:none; color: var(--ink-soft);
+    font-size: 0.95rem; cursor:pointer; padding: 0 2px;
+  }
+  .row-delete:active{ color: var(--stamp-red); }
+
+  .receipt-empty{
+    text-align:center; color: var(--ink-soft); font-size: 0.85rem;
+    padding: 20px 0 6px;
+  }
+
+  /* --- summary --- */
+  .summary-person{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 8px 0; border-bottom: 1px dashed var(--paper-line);
+    font-size: 0.85rem;
+  }
+  .summary-person:last-of-type{ border-bottom:none; }
+  .summary-person .name{ font-weight:700; }
+  .summary-person .nums{ text-align:right; }
+  .summary-person .due{ color: var(--ink-soft); font-size: 0.76rem; }
+
+  .grand-total{
+    margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--ink);
+    display:flex; flex-direction:column; gap: 5px; font-size: 0.9rem;
+  }
+  .grand-total .line{ display:flex; justify-content:space-between; }
+  .grand-total .line.diff{ font-weight:700; }
+
+  .banner{
+    background: #4A3826;
+    border: 1px solid #6B5237;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    color: #F0E4D2;
+    margin-bottom: 16px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .banner button{
+    background: var(--accent); border:none; color:#fff;
+    border-radius: 5px; padding: 6px 10px; font-size: 0.76rem;
+    cursor:pointer; white-space:nowrap;
+  }
+
+  @media (max-width: 380px){
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+
+  <header>
+    <div>
+      <h1>收款結算小幫手</h1>
+      <p>登記今天的訂購，抓出誰少給、誰多給</p>
+    </div>
+    <button class="newday-btn" id="newDayBtn">新的一天</button>
+  </header>
+  <div class="dateline" id="dateLine"></div>
+
+  <div id="dayBanner"></div>
+
+  <details class="card" id="storeCard">
+    <summary>
+      <span>店家與菜單（<span id="storeCount">0</span> 家）</span>
+      <span class="caret">▸</span>
+    </summary>
+
+    <div class="store-chips" id="storeChips"></div>
+    <div class="add-menu-row">
+      <input type="text" id="newStoreName" placeholder="新增店家名稱，例如：漢來便當">
+      <button class="primary-btn" id="addStoreBtn">新增店家</button>
+    </div>
+
+    <div id="storeEditArea"></div>
+  </details>
+
+  <section class="card">
+    <div class="card-title">今天的訂購資訊</div>
+    <div class="form-grid" style="margin-top:12px;">
+      <div class="full">
+        <span class="field-label">今天訂哪家</span>
+        <select id="fStoreSelect"></select>
+      </div>
+      <div class="full">
+        <span class="field-label">送達地址</span>
+        <input type="text" id="fAddress" placeholder="例如：台北市信義路◯◯號 3樓 警衛室">
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">登記一筆</div>
+    <div class="form-grid">
+      <div class="full">
+        <span class="field-label">姓名</span>
+        <input type="text" id="fName" placeholder="客人／訂購的人">
+      </div>
+      <div class="full">
+        <span class="field-label">部門／分機（可留空）</span>
+        <input type="text" id="fDept" placeholder="例如：業務部 分機102">
+      </div>
+      <div class="full">
+        <span class="field-label">品項</span>
+        <select id="fItem"></select>
+      </div>
+      <div>
+        <span class="field-label">數量</span>
+        <input type="number" id="fQty" value="1" min="1">
+      </div>
+      <div>
+        <span class="field-label">單價（可改）</span>
+        <input type="number" id="fPrice" min="0">
+      </div>
+      <div class="full">
+        <span class="field-label">客人給的錢（沒收到可先留空）</span>
+        <input type="number" id="fGiven" placeholder="例如：100" min="0">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="primary-btn" id="addRowBtn">登記</button>
+    </div>
+  </section>
+
+  <div class="receipt-wrap">
+    <div class="zigzag top"></div>
+    <div class="receipt">
+      <div class="receipt-title">今日登記</div>
+      <div id="orderRows"></div>
+      <div class="receipt-empty" id="orderEmpty">還沒有登記，上面填一筆看看</div>
+    </div>
+    <div class="zigzag bottom"></div>
+  </div>
+
+  <section class="card" id="lineCard" style="display:none;">
+    <div class="card-title">給 LINE 的訂單文字</div>
+    <div class="empty-note" style="margin-top:8px;">整理好之後可以直接複製貼到 LINE 傳給店家</div>
+    <textarea id="lineText" readonly style="margin-top:10px; width:100%; min-height:160px; resize:vertical; font-size:0.82rem; line-height:1.6; font-family:inherit;"></textarea>
+    <div class="form-actions">
+      <button class="primary-btn" id="copyLineBtn">複製文字</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">結算</div>
+    <div id="summaryList" style="margin-top:10px;"></div>
+    <div class="grand-total">
+      <div class="line"><span>應收總計</span><span class="mono" id="totalDue">0 元</span></div>
+      <div class="line"><span>已收總計</span><span class="mono" id="totalGiven">0 元</span></div>
+      <div class="line diff"><span>差額</span><span class="mono" id="totalDiff">0 元</span></div>
+    </div>
+    <div class="form-actions">
+      <button class="primary-btn" id="genLineBtn">整理成 LINE 訂單文字</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'bento-calc-state';
+const uid = () => Math.random().toString(36).slice(2, 10);
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const fmt = n => `${Math.round(n).toLocaleString()} 元`;
+
+let state = {
+  stores: [],
+  order: { date: todayStr(), rows: [], storeId: '', address: '' }
+};
+
+// which store's menu is currently open for editing in the "店家與菜單" card
+let editingStoreId = '';
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed.stores)){
+        state.stores = parsed.stores;
+      }else if(Array.isArray(parsed.menu) && parsed.menu.length){
+        // migrate old single-menu format into one store
+        state.stores = [{ id: uid(), name: '預設店家', items: parsed.menu }];
+      }else{
+        state.stores = [];
+      }
+      state.order = parsed.order || { date: todayStr(), rows: [], storeId: '', address: '' };
+      if(state.order.storeId === undefined) state.order.storeId = parsed.order && parsed.order.store ? '' : '';
+      if(state.order.address === undefined) state.order.address = '';
+      // if migrated from old flat menu and no storeId set, point at the migrated store
+      if(!state.order.storeId && state.stores.length === 1 && !parsed.stores){
+        state.order.storeId = state.stores[0].id;
+      }
+    }
+  }catch(e){
+    // no saved state yet — start fresh
+  }
+  if(state.stores.length && !state.stores.some(s => s.id === editingStoreId)){
+    editingStoreId = state.stores[0].id;
+  }
+  render();
+}
+
+async function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error('Storage error:', e);
+  }
+}
+
+function checkDayBanner(){
+  const banner = document.getElementById('dayBanner');
+  if(state.order.date !== todayStr() && state.order.rows.length > 0){
+    banner.innerHTML = `
+      <div class="banner">
+        <span>目前顯示的是 ${state.order.date} 的登記，要開始新的一天嗎？</span>
+        <button id="bannerClearBtn">開始新的一天</button>
+      </div>`;
+    document.getElementById('bannerClearBtn').onclick = startNewDay;
+  }else{
+    banner.innerHTML = '';
+  }
+}
+
+function startNewDay(){
+  if(state.order.rows.length > 0 && !confirm('清空今天已登記的所有項目？')) return;
+  const keepStoreId = state.order.storeId;
+  state.order = { date: todayStr(), rows: [], storeId: keepStoreId, address: '' };
+  saveState();
+  render();
+}
+
+// ---------- stores & menus ----------
+function getStore(id){ return state.stores.find(s => s.id === id); }
+
+function renderStores(){
+  document.getElementById('storeCount').textContent = state.stores.length;
+  const storeCard = document.getElementById('storeCard');
+  if(state.stores.length === 0) storeCard.open = true;
+
+  const chips = document.getElementById('storeChips');
+  if(state.stores.length === 0){
+    chips.innerHTML = `<div class="empty-note">還沒有店家，先在下面新增一家吧。</div>`;
+  }else{
+    chips.innerHTML = state.stores.map(s => `
+      <button type="button" class="store-chip ${s.id === editingStoreId ? 'active' : ''}" data-store="${s.id}">${escapeHtml(s.name)}</button>
+    `).join('');
+    chips.querySelectorAll('[data-store]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editingStoreId = btn.dataset.store;
+        renderStores();
+      });
+    });
+  }
+
+  const editArea = document.getElementById('storeEditArea');
+  const store = getStore(editingStoreId);
+  if(!store){
+    editArea.innerHTML = '';
+    return;
+  }
+
+  editArea.innerHTML = `
+    <div class="store-edit-header">
+      <span class="name">${escapeHtml(store.name)} 的菜單</span>
+      <button type="button" class="link-btn" id="deleteStoreBtn">刪除這家店</button>
+    </div>
+    <div class="menu-list" id="menuList"></div>
+    <div class="empty-note" id="menuEmptyNote" style="display:none;">這家店還沒有品項，新增一個吧。</div>
+    <div class="add-menu-row">
+      <input type="text" id="newItemName" placeholder="品項名稱，例如：奶茶、排骨便當">
+      <input type="number" id="newItemPrice" placeholder="價格" min="0">
+      <button class="primary-btn" id="addItemBtn">新增</button>
+    </div>
+  `;
+
+  const list = document.getElementById('menuList');
+  const emptyNote = document.getElementById('menuEmptyNote');
+  emptyNote.style.display = store.items.length ? 'none' : 'block';
+
+  store.items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'menu-row';
+    row.innerHTML = `
+      <input type="text" value="${escapeAttr(item.name)}" data-id="${item.id}" data-field="name">
+      <input type="number" value="${item.price}" min="0" data-id="${item.id}" data-field="price">
+      <button class="icon-btn" data-del="${item.id}" title="刪除">✕</button>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      const field = e.target.dataset.field;
+      const item = store.items.find(m => m.id === id);
+      if(!item) return;
+      item[field] = field === 'price' ? Number(e.target.value) || 0 : e.target.value;
+      saveState();
+      renderItemSelect();
+    });
+  });
+  list.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      store.items = store.items.filter(m => m.id !== btn.dataset.del);
+      saveState();
+      renderStores();
+      renderItemSelect();
+    });
+  });
+
+  document.getElementById('addItemBtn').addEventListener('click', () => {
+    const nameEl = document.getElementById('newItemName');
+    const priceEl = document.getElementById('newItemPrice');
+    const name = nameEl.value.trim();
+    const price = Number(priceEl.value);
+    if(!name || !priceEl.value){ nameEl.focus(); return; }
+    store.items.push({ id: uid(), name, price: price || 0 });
+    nameEl.value = ''; priceEl.value = '';
+    saveState();
+    renderStores();
+    renderItemSelect();
+  });
+
+  document.getElementById('deleteStoreBtn').addEventListener('click', () => {
+    if(!confirm(`刪除「${store.name}」和它的菜單？`)) return;
+    state.stores = state.stores.filter(s => s.id !== store.id);
+    if(state.order.storeId === store.id) state.order.storeId = '';
+    editingStoreId = state.stores.length ? state.stores[0].id : '';
+    saveState();
+    render();
+  });
+}
+
+document.getElementById('addStoreBtn').addEventListener('click', () => {
+  const nameEl = document.getElementById('newStoreName');
+  const name = nameEl.value.trim();
+  if(!name) { nameEl.focus(); return; }
+  const newStore = { id: uid(), name, items: [] };
+  state.stores.push(newStore);
+  editingStoreId = newStore.id;
+  nameEl.value = '';
+  saveState();
+  renderStores();
+  renderStoreSelect();
+});
+
+// ---------- today's store picker ----------
+function renderStoreSelect(){
+  const sel = document.getElementById('fStoreSelect');
+  if(state.stores.length === 0){
+    sel.innerHTML = `<option value="">先在上面新增店家</option>`;
+  }else{
+    sel.innerHTML = state.stores.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+    if(state.stores.some(s => s.id === state.order.storeId)){
+      sel.value = state.order.storeId;
+    }else{
+      state.order.storeId = state.stores[0].id;
+      sel.value = state.order.storeId;
+    }
+  }
+}
+
+document.getElementById('fStoreSelect').addEventListener('change', e => {
+  state.order.storeId = e.target.value;
+  saveState();
+  renderItemSelect();
+});
+document.getElementById('fAddress').addEventListener('change', e => {
+  state.order.address = e.target.value;
+  saveState();
+});
+
+function renderItemSelect(){
+  const sel = document.getElementById('fItem');
+  const store = getStore(state.order.storeId);
+  const prevValue = sel.value;
+  if(!store){
+    sel.innerHTML = `<option value="">請先選擇今天訂哪家</option>`;
+  }else if(!store.items.length){
+    sel.innerHTML = `<option value="">這家店還沒有品項，去上面新增</option>`;
+  }else{
+    sel.innerHTML = store.items.map(m => `<option value="${m.id}">${escapeHtml(m.name)}（${m.price} 元）</option>`).join('');
+    if(store.items.some(m => m.id === prevValue)) sel.value = prevValue;
+  }
+  syncPriceField();
+}
+
+function syncPriceField(){
+  const sel = document.getElementById('fItem');
+  const priceField = document.getElementById('fPrice');
+  const store = getStore(state.order.storeId);
+  const item = store ? store.items.find(m => m.id === sel.value) : null;
+  priceField.value = item ? item.price : '';
+}
+
+document.getElementById('fItem').addEventListener('change', syncPriceField);
+
+// ---------- order rows ----------
+function addOrderRow(){
+  const name = document.getElementById('fName').value.trim();
+  const dept = document.getElementById('fDept').value.trim();
+  const store = getStore(state.order.storeId);
+  const itemId = document.getElementById('fItem').value;
+  const item = store ? store.items.find(m => m.id === itemId) : null;
+  const qty = Math.max(1, Number(document.getElementById('fQty').value) || 1);
+  const unitPrice = Number(document.getElementById('fPrice').value) || 0;
+  const givenRaw = document.getElementById('fGiven').value;
+  const given = givenRaw === '' ? null : Number(givenRaw);
+
+  if(!name){ document.getElementById('fName').focus(); return; }
+  if(!item){ document.getElementById('fItem').focus(); return; }
+
+  state.order.date = todayStr();
+  state.order.rows.push({
+    id: uid(), name, dept, itemName: item.name, qty, unitPrice, given
+  });
+
+  document.getElementById('fName').value = '';
+  document.getElementById('fDept').value = '';
+  document.getElementById('fGiven').value = '';
+  document.getElementById('fQty').value = 1;
+  saveState();
+  render();
+}
+document.getElementById('addRowBtn').addEventListener('click', addOrderRow);
+
+function statusFor(due, given){
+  if(given === null || given === undefined || given === '') return { cls:'pending', label:'尚未收錢' };
+  const diff = given - due;
+  if(diff === 0) return { cls:'even', label:'已收齊' };
+  if(diff < 0) return { cls:'short', label:`少給 ${fmt(-diff)}` };
+  return { cls:'over', label:`多給 ${fmt(diff)}` };
+}
+
+function renderOrderRows(){
+  const wrap = document.getElementById('orderRows');
+  const empty = document.getElementById('orderEmpty');
+  empty.style.display = state.order.rows.length ? 'none' : 'block';
+  wrap.innerHTML = '';
+
+  state.order.rows.forEach(row => {
+    const due = row.qty * row.unitPrice;
+    const status = statusFor(due, row.given);
+    const el = document.createElement('div');
+    el.className = 'order-row';
+    el.innerHTML = `
+      <div class="order-row-top">
+        <div>
+          <div class="order-row-name">${escapeHtml(row.name)}${row.dept ? `　<span style="font-weight:400;color:var(--ink-soft);">${escapeHtml(row.dept)}</span>` : ''}</div>
+          <div class="order-row-item">${escapeHtml(row.itemName)} × ${row.qty}</div>
+        </div>
+        <div class="order-row-due mono">${fmt(due)}</div>
+      </div>
+      <div class="order-row-mid">
+        <span class="stamp ${status.cls}">${status.label}</span>
+        <div class="given-field">
+          <label>收到</label>
+          <input type="number" min="0" placeholder="—" value="${row.given ?? ''}" data-given="${row.id}">
+          <button class="row-delete" data-del="${row.id}" title="刪除">✕</button>
+        </div>
+      </div>
+    `;
+    wrap.appendChild(el);
+  });
+
+  wrap.querySelectorAll('[data-given]').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const r = state.order.rows.find(r => r.id === e.target.dataset.given);
+      if(!r) return;
+      r.given = e.target.value === '' ? null : Number(e.target.value);
+      saveState();
+      render();
+    });
+  });
+  wrap.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.order.rows = state.order.rows.filter(r => r.id !== btn.dataset.del);
+      saveState();
+      render();
+    });
+  });
+}
+
+// ---------- summary ----------
+function renderSummary(){
+  const grouped = {};
+  state.order.rows.forEach(row => {
+    const due = row.qty * row.unitPrice;
+    if(!grouped[row.name]) grouped[row.name] = { due: 0, given: 0, hasGiven: false };
+    grouped[row.name].due += due;
+    if(row.given !== null && row.given !== undefined){
+      grouped[row.name].given += row.given;
+      grouped[row.name].hasGiven = true;
+    }
+  });
+
+  const list = document.getElementById('summaryList');
+  const names = Object.keys(grouped);
+  if(names.length === 0){
+    list.innerHTML = `<div class="empty-note">還沒有可以結算的項目</div>`;
+  }else{
+    list.innerHTML = names.map(name => {
+      const g = grouped[name];
+      const status = g.hasGiven ? statusFor(g.due, g.given) : { cls:'pending', label:'尚未收錢' };
+      return `
+        <div class="summary-person">
+          <div>
+            <div class="name">${escapeHtml(name)}</div>
+            <div class="due">應收 ${fmt(g.due)}</div>
+          </div>
+          <div class="nums">
+            <span class="stamp ${status.cls}">${status.label}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  const totalDue = state.order.rows.reduce((s,r) => s + r.qty * r.unitPrice, 0);
+  const totalGiven = state.order.rows.reduce((s,r) => s + (r.given ?? 0), 0);
+  const totalDiff = totalGiven - totalDue;
+
+  document.getElementById('totalDue').textContent = fmt(totalDue);
+  document.getElementById('totalGiven').textContent = fmt(totalGiven);
+  const diffEl = document.getElementById('totalDiff');
+  diffEl.textContent = totalDiff === 0 ? '0 元（收齊）' : (totalDiff < 0 ? `少 ${fmt(-totalDiff)}` : `多 ${fmt(totalDiff)}`);
+  diffEl.style.color = totalDiff === 0 ? 'var(--stamp-green)' : (totalDiff < 0 ? 'var(--stamp-red)' : 'var(--stamp-amber)');
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(str){ return escapeHtml(str); }
+
+// ---------- LINE order text ----------
+function generateLineText(){
+  const lines = [];
+  const store = getStore(state.order.storeId);
+  lines.push('【今日訂購】');
+  if(store) lines.push(`店家：${store.name}`);
+  if(state.order.address) lines.push(`送達地址：${state.order.address}`);
+  lines.push('');
+
+  state.order.rows.forEach(row => {
+    const deptPart = row.dept ? `　${row.dept}` : '';
+    lines.push(`${row.name}　${row.itemName} × ${row.qty}${deptPart}`);
+  });
+
+  const totalQty = state.order.rows.reduce((s,r) => s + r.qty, 0);
+  const totalDue = state.order.rows.reduce((s,r) => s + r.qty * r.unitPrice, 0);
+  lines.push('');
+  lines.push(`共 ${totalQty} 份，合計 ${fmt(totalDue)}`);
+
+  return lines.join('\n');
+}
+
+document.getElementById('genLineBtn').addEventListener('click', () => {
+  const text = generateLineText();
+  const card = document.getElementById('lineCard');
+  const textarea = document.getElementById('lineText');
+  textarea.value = text;
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+document.getElementById('copyLineBtn').addEventListener('click', async () => {
+  const textarea = document.getElementById('lineText');
+  const btn = document.getElementById('copyLineBtn');
+  try{
+    await navigator.clipboard.writeText(textarea.value);
+    btn.textContent = '已複製！';
+  }catch(e){
+    textarea.select();
+    document.execCommand('copy');
+    btn.textContent = '已複製！';
+  }
+  setTimeout(() => { btn.textContent = '複製文字'; }, 1500);
+});
+
+function render(){
+  document.getElementById('dateLine').textContent = `日期：${state.order.date}`;
+  checkDayBanner();
+  renderStores();
+  renderStoreSelect();
+  renderItemSelect();
+  renderOrderRows();
+  renderSummary();
+  document.getElementById('fAddress').value = state.order.address || '';
+}
+
+document.getElementById('newDayBtn').addEventListener('click', startNewDay);
+
+loadState();
+</script>
+</body>
+</html>
