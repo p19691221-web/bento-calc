@@ -1,0 +1,14 @@
+{
+  "name": "收款結算小幫手",
+  "short_name": "收款小幫手",
+  "description": "登記今天的訂購，抓出誰少給、誰多給",
+  "start_url": "./bento.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#2B2019",
+  "theme_color": "#2B2019",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
